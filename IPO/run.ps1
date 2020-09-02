@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 $Context = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
 $Table = Get-AzStorageTable -Context $Context
 # Read all previously stored S1 filings
-$StoredS1s = Get-AzTableRow -Table $Table.CloudTable -PartitionKey 'IPO' | Select-Object Name,Link,Time,Id
+$StoredS1s = Get-AzTableRow -Table $Table.CloudTable -PartitionKey 'IPO' | Select-Object Name, Link, Time, Id
 
 # Get all recent S1 filings from SEC
 $Results = Invoke-RestMethod 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=S-1&output=atom'
@@ -21,8 +21,15 @@ $RecentS1s = $Results | Where-Object { $_.category.term -eq 'S-1' } | ForEach-Ob
 }
 
 # Add all new S1 filings to table not already there
-foreach ($S1 in $RecentS1s.Where({ $_.Id -notin $StoredS1s.Id })) {
+foreach ($S1 in $RecentS1s.Where( { $_.Id -notin $StoredS1s.Id })) {
     $S1 | ConvertTo-Json | Write-Host
 
     $null = Add-AzTableRow -Table $Table.CloudTable -PartitionKey 'IPO' -RowKey $S1.Id -Property $S1
 }
+
+# Associate values to output bindings by calling 'Push-OutputBinding'.
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ''
+    }
+)
