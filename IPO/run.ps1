@@ -21,15 +21,14 @@ $RecentS1s = $Results | Where-Object { $_.category.term -eq 'S-1' } | ForEach-Ob
 }
 
 # Add all new S1 filings to table not already there
-foreach ($S1 in $RecentS1s.Where( { $_.Id -notin $StoredS1s.Id })) {
-    $S1 | ConvertTo-Json | Write-Host
-
+$Body = foreach ($S1 in $RecentS1s.Where( { $_.Id -notin $StoredS1s.Id })) {
+    Write-Output $S1
     $null = Add-AzTableRow -Table $Table.CloudTable -PartitionKey 'IPO' -RowKey $S1.Id -Property $S1
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = ''
+        Body       = $Body
     }
 )
